@@ -6,6 +6,7 @@
  */
 
 elgg_register_event_handler('init', 'system', 'demo_init');
+elgg_register_event_handler('init', 'system', 'demo_plugins_init');
 
 function demo_init() {
 	// elgg wasn't designed to allow you to hook into admin_gatekeeper() or
@@ -31,6 +32,35 @@ function demo_init() {
 	elgg_register_action("plugins/settings/save");
 
 	elgg_register_page_handler('reset', 'demo_reset_site');
+}
+
+function demo_plugins_init() {
+	$site = elgg_get_site_entity();
+	if (!$site->demo_plugins_setup) {
+		$site->demo_plugins_setup = true;
+
+		elgg_set_ignore_access(true);
+		$plugins = elgg_get_plugins('all');
+		foreach ($plugins as $plugin) {
+			switch ($plugin->getID()) {
+				case 'uservalidationbyemail':
+					$plugin->deactivate();
+					break;
+				case 'csv_user_import':
+				case 'custom_index':
+				case 'dashboard':
+				case 'embed':
+				case 'externalpages':
+				case 'twitter':
+					$plugin->activate();
+					break;
+			}
+		}
+		elgg_set_ignore_access(false);
+
+		elgg_invalidate_simplecache();
+		elgg_filepath_cache_reset();
+	}
 }
 
 /**
