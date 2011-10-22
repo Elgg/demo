@@ -2,7 +2,7 @@
 /**
  * Elgg demo plugin
  *
- * @todo - add widgets automatically to all users
+ * @todo - add admin and default widgets automatically to all users
  */
 
 elgg_register_event_handler('init', 'system', 'demo_init');
@@ -21,12 +21,16 @@ function demo_init() {
 	));
 
 	// let demo users know they cannot change site settings or create admin users
-	elgg_extend_view('forms/admin/site/update_basic', 'demo/limit', 1);
-	elgg_extend_view('forms/admin/site/update_advanced', 'demo/limit', 1);
-	elgg_extend_view('forms/useradd', 'demo/limit', 1);
+	if (!elgg_is_admin_logged_in()) {
+		elgg_extend_view('forms/admin/site/update_basic', 'demo/limit', 1);
+		elgg_extend_view('forms/admin/site/update_advanced', 'demo/limit', 1);
+		elgg_extend_view('forms/useradd', 'demo/limit', 1);
+	}
 
 	// let demo users change plugin settings
 	elgg_register_action("plugins/settings/save");
+
+	elgg_register_page_handler('reset', 'demo_reset_site');
 }
 
 /**
@@ -83,4 +87,26 @@ function demo_admin_page_handler($page) {
 
 	$body = elgg_view_layout('admin', array('content' => $content, 'title' => $title));
 	echo elgg_view_page($title, $body, 'admin');
+}
+
+/**
+ * Start the reset process for a demo site
+ */
+function demo_reset_site() {
+	if ($_SERVER['SERVER_ADDR'] !== $_SERVER['REMOTE_ADDR']) {
+		exit;
+	}
+
+	$db_prefix = elgg_get_config('dbprefix');
+
+	$tables = get_data("SHOW TABLES LIKE '$db_prefix%'");
+	foreach ($tables as $table) {
+		foreach ($table as $name) {
+			get_data("DROP TABLE IF EXISTS $name");
+		}
+	}
+
+	$install_url = elgg_normalize_url('mod/demo/install.php');
+	file_get_contents($install_url);
+	exit;
 }
