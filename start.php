@@ -6,11 +6,12 @@
  */
 
 elgg_register_event_handler('init', 'system', 'demo_init');
-elgg_register_event_handler('init', 'system', 'demo_plugins_init');
+elgg_register_event_handler('init', 'system', 'demo_users_init');
+elgg_register_event_handler('init', 'system', 'demo_site_init');
 
 function demo_init() {
 	// elgg wasn't designed to allow you to hook into admin_gatekeeper() or
-	// elgg_is_admin_loggedin() make it impossible to easily create a roles system
+	// elgg_is_admin_loggedin() making it impossible to easily create a roles system
 	elgg_register_page_handler('admin', 'demo_admin_page_handler');
 
 	elgg_register_menu_item('topbar', array(
@@ -34,10 +35,13 @@ function demo_init() {
 	elgg_register_page_handler('reset', 'demo_reset_site');
 }
 
-function demo_plugins_init() {
+/**
+ * Prepare the demo site after it has been installed
+ */
+function demo_site_init() {
 	$site = elgg_get_site_entity();
-	if (!$site->demo_plugins_setup) {
-		$site->demo_plugins_setup = true;
+	if (!$site->demo_site_setup) {
+		$site->demo_site_setup = true;
 
 		elgg_set_ignore_access(true);
 		$plugins = elgg_get_plugins('all');
@@ -60,7 +64,52 @@ function demo_plugins_init() {
 
 		elgg_invalidate_simplecache();
 		elgg_filepath_cache_reset();
+
+		set_config('walled_garden', true);
 	}
+}
+
+/**
+ * Create some users so that a clean site isn't empty
+ */
+function demo_users_init() {
+	$site = elgg_get_site_entity();
+	if (!$site->demo_users_setup && elgg_is_active_plugin('csv_user_import')) {
+		$site->demo_users_setup = true;
+		
+		elgg_load_library('csv_user_import');
+
+		elgg_register_plugin_hook_handler('csv_import', 'user', 'demo_finish_user_import');
+		
+		$filename = elgg_get_plugins_path() . 'demo/data/users.csv';
+		$num_users = csv_user_import($filename, 'header', ',', false);
+
+		// core devs are all friends
+		$admins = elgg_get_admins(array('order_by' => 'e.guid asc'));
+		unset($admins[0]);
+		foreach ($admins as $subject) {
+			foreach ($admins as $object) {
+				if ($subject->getGUID() != $object->getGUID()) {
+					$subject->addFriend($object->getGUID());
+				}
+			}
+		}
+	}
+}
+
+/**
+ * Finish the import of the users
+ *
+ * @param string $hook
+ * @param string $type
+ * @param bool   $result
+ * @param array  $params
+ */
+function demo_finish_user_import($hook, $type, $result, $params) {
+	$user = $params['user'];
+	$setting = elgg_set_ignore_access(true);
+	$user->makeAdmin();
+	elgg_set_ignore_access($setting);
 }
 
 /**
