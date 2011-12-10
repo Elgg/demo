@@ -32,8 +32,8 @@ $params = array(
 	// site settings
 	'sitename' => 'Elgg Demo',
 	'wwwroot' => $url,
-	'dataroot' => '/opt/1.8_data/',
-	'siteemail' => 'noreply@demo.elgg.org',
+	'dataroot' => '/var/lib/elgg/',
+	'siteemail' => 'noreply@elgg.org',
 
 	// admin account
 	'displayname' => 'Site Admin',
