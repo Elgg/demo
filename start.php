@@ -32,7 +32,10 @@ function demo_init() {
 	// let demo users change plugin settings
 	elgg_register_action("plugins/settings/save");
 
+	elgg_register_library('demo_init', elgg_get_plugins_path() . 'demo/lib/demo_init.php');
+
 	elgg_register_page_handler('reset', 'demo_reset_site');
+	elgg_register_plugin_hook_handler('public_pages', 'walled_garden', 'demo_public_pages');
 }
 
 /**
@@ -42,6 +45,8 @@ function demo_site_init() {
 	$site = elgg_get_site_entity();
 	if (!$site->demo_site_setup) {
 		$site->demo_site_setup = true;
+
+		elgg_load_library('demo_init');
 
 		elgg_set_ignore_access(true);
 		$plugins = elgg_get_plugins('all');
@@ -78,6 +83,7 @@ function demo_users_init() {
 		$site->demo_users_setup = true;
 		
 		elgg_load_library('csv_user_import');
+		elgg_load_library('demo_init');
 
 		elgg_register_plugin_hook_handler('csv_import', 'user', 'demo_finish_user_import');
 		
@@ -166,6 +172,7 @@ function demo_admin_page_handler($page) {
 
 	$body = elgg_view_layout('admin', array('content' => $content, 'title' => $title));
 	echo elgg_view_page($title, $body, 'admin');
+	return true;
 }
 
 /**
@@ -188,4 +195,17 @@ function demo_reset_site() {
 	$install_url = elgg_normalize_url('mod/demo/install.php');
 	file_get_contents($install_url);
 	exit;
+}
+
+/**
+ * Sets the reset page as public
+ * 
+ * @param string $hook
+ * @param string $type
+ * @param array  $pages
+ * @return array
+ */
+function demo_public_pages($hook, $type, $pages) {
+	$pages[] = 'reset';
+	return $pages;
 }
